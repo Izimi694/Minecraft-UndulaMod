@@ -1,0 +1,18 @@
+{
+    "type": "minecraft:crafting_shaped",
+    "pattern": [
+        "HD ",
+        "DBD",
+        " DS"
+    ],
+    "key": {
+        "D": { "item": "minecraft:diamond" },
+        "B": { "item": "minecraft:breeze_rod" },
+        "S": { "item": "minecraft:nether_star" },
+        "H": { "item": "minecraft:heart_of_the_sea" }
+    },
+    "result": {
+        "id": "undulamod:janus_undae",
+        "count": 1
+    }
+}

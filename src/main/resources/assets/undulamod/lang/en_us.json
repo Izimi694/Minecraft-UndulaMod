@@ -1,0 +1,15 @@
+{
+    "item.undulamod.janus_undae": "Janus Undae",
+    "item.undulamod.janus_undae.lore1": "Deep sea pressure, endless ripples",
+    "item.undulamod.janus_undae.lore2": "§3Crits build stacks",
+    "item.undulamod.janus_undae.enchant.lethality": "§Fatalis §7- Increases crit rate",
+    "item.undulamod.janus_undae.enchant.shatter": "§9Vorago §7- Expands radius, reduces stack limit, consume full stacks trigger whirlpool",
+    "item.undulamod.janus_undae.enchant.penetrate": "§5Penetralis §7- Ignores armor, increases stack limit, add damage per stacks",
+    "item.undulamod.shatter_whirl_book": "Enchanted Book",
+    "item.undulamod.penetrate_book": "Enchanted Book",
+    "item.undulamod.lethality_book": "Enchanted Book",
+    "enchantment.undulamod.shatter_whirl": "Vorago",
+    "enchantment.undulamod.penetrate": "Penetralis",
+    "enchantment.undulamod.lethality": "Fatalis",
+    "itemGroup.undulamod.undula_group": "Janus Undae"
+}

@@ -1,0 +1,18 @@
+{
+    "description": {
+        "translate": "enchantment.undulamod.lethality"
+    },
+    "supported_items": "#minecraft:swords",
+    "weight": 4,
+    "max_level": 5,
+    "min_cost": {
+        "base": 5,
+        "per_level_above_first": 0
+    },
+    "max_cost": {
+        "base": 20,
+        "per_level_above_first": 0
+    },
+    "anvil_cost": 4,
+    "slots": ["mainhand"]
+}

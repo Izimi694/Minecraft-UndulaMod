@@ -1,0 +1,19 @@
+{
+    "description": {
+        "translate": "enchantment.undulamod.shatter_whirl"
+    },
+    "supported_items": "#minecraft:swords",
+    "weight": 2,
+    "max_level": 3,
+    "min_cost": {
+        "base": 10,
+        "per_level_above_first": 0
+    },
+    "max_cost": {
+        "base": 25,
+        "per_level_above_first": 0
+    },
+    "anvil_cost": 6,
+    "exclusive_set": "#undulamod:exclusive_set/undula_shatter_whirl_conflict",
+    "slots": ["mainhand"]
+}

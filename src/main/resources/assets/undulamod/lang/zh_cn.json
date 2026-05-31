@@ -1,0 +1,15 @@
+{
+    "item.undulamod.janus_undae": "雅努斯的涟漪",
+    "item.undulamod.janus_undae.lore1": "深海之压，涟漪不绝",
+    "item.undulamod.janus_undae.lore2": "§3暴击触发层数",
+    "item.undulamod.janus_undae.enchant.lethality": "§c致命 §7- 提升暴击率",
+    "item.undulamod.janus_undae.enchant.shatter": "§9碎漩狂舞 §7- 扩大半径，减少层数上限，消耗满层触发水漩涡",
+    "item.undulamod.janus_undae.enchant.penetrate": "§5渗透 §7- 无视护甲，增加层数上限，增加每层层数增伤",
+    "item.undulamod.shatter_whirl_book": "附魔书",
+    "item.undulamod.penetrate_book": "附魔书",
+    "item.undulamod.lethality_book": "附魔书",
+    "enchantment.undulamod.shatter_whirl": "碎漩狂舞",
+    "enchantment.undulamod.penetrate": "渗透",
+    "enchantment.undulamod.lethality": "致命",
+    "itemGroup.undulamod.undula_group": "雅努斯的涟漪"
+}
