@@ -67,12 +67,14 @@ public class UndulaTrigger {
     }
 
     public static void spreadStacks(ServerWorld world, LivingEntity source, int remaining,
-                                     int maxLimit, int sourceShatter, int sourcePenetrate) {
-        if (remaining <= 1) return;
+                                    int maxLimit, int sourceShatter, int sourcePenetrate) {
+        if (remaining < 1) return;
+
         Vec3d pos = source.getPos();
         List<LivingEntity> targets = world.getEntitiesByClass(LivingEntity.class,
             Box.from(pos).expand(UndulaConfig.getUndulaRadius(remaining, sourceShatter) + 1),
             e -> e != source && e.isAlive() && !(e instanceof PlayerEntity));
+
         if (targets.isEmpty()) return;
 
         targets.sort((a, b) -> Double.compare(a.squaredDistanceTo(pos), b.squaredDistanceTo(pos)));
@@ -83,7 +85,7 @@ public class UndulaTrigger {
         if (currentTick - d.lastTransferTick() < 2) return;
 
         int targetMax = d.isEmpty() ? maxLimit : Math.min(d.maxStacks(), maxLimit);
-        int finalStacks = d.stacks() + remaining - 1;
+        int finalStacks = Math.min(Math.max(d.stacks() + 1, remaining), targetMax);
 
         UndulaDataStorage.set(target, new UndulaData(finalStacks, targetMax, sourceShatter, sourcePenetrate, currentTick, d.critRate()));
         sendParticle(world, target.getPos().add(0, target.getHeight() + 0.5, 0),
