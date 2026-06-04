@@ -20,6 +20,9 @@ public class UndulaScheduler {
     private static final Set<UUID> deathProcessed = new HashSet<>();
     private static int nextUndulaId = 1;
 
+    private static int globalChainCount = 0;
+    private static final int MAX_GLOBAL_CHAINS = 64;
+
     public record PendingTrigger(int undulaId, UndulaContext ctx) {}
 
     private static class PullTask {
@@ -77,6 +80,8 @@ public class UndulaScheduler {
     }
 
     public static void scheduleImmediate(UndulaContext ctx) {
+        if (globalChainCount >= MAX_GLOBAL_CHAINS) return;
+        globalChainCount++;
         triggersThisTick.add(new PendingTrigger(nextUndulaId++, ctx));
     }
 
@@ -94,6 +99,8 @@ public class UndulaScheduler {
     }
 
     public static void tick(ServerWorld world) {
+        globalChainCount = 0;
+
         List<PendingTrigger> toProcess = new ArrayList<>(triggersThisTick);
         triggersThisTick.clear();
 
@@ -108,11 +115,8 @@ public class UndulaScheduler {
             boolean centerDead = !center.isAlive();
 
             if (centerDead) {
-                // 已由onDeath处理过，跳过
                 if (deathProcessed.contains(center.getUuid())) continue;
-                // 传染链目标已死，跳过
                 if (ctx.chainDepth() > 0) continue;
-                // 直接攻击目标已死，使用死亡位置爆炸
                 ctx = ctx.withDeathPos(center.getPos());
             } else {
                 setCooldown(center);

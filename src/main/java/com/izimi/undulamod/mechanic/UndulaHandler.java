@@ -60,21 +60,41 @@ public class UndulaHandler {
         }
 
         int actualStacks = d.stacks() > 0 ? d.stacks() : 1;
-        int spreadStacks = Math.max(1, actualStacks / 2); // 扩散保留50%层数，至少1层
+        int spreadStacks = Math.max(1, actualStacks / 2);
 
-        // 亡语AOE爆炸
+        // 亡语AOE爆炸参数
         float dmg = UndulaConfig.getUndulaDamage(actualStacks, d.shatterLevel(), d.penetrateLevel());
         float radius = UndulaConfig.getUndulaRadius(actualStacks, d.shatterLevel());
         Vec3d pos = e.getPos().add(0, e.getHeight() * 0.5, 0);
+        float critRate = d.critRate() > 0 ? d.critRate() : 0.10f;
 
         List<LivingEntity> targets = world.getEntitiesByClass(LivingEntity.class,
             Box.from(pos).expand(radius),
             target -> target.isAlive() && target != e && !(target instanceof PlayerEntity));
 
         for (LivingEntity target : targets) {
+            // 亡语直接伤害
             target.damage(world.getDamageSources().magic(), dmg);
+
+            // 亡语暴击判定：对每个受伤目标，概率触发新连锁
+            if (world.random.nextFloat() < critRate) {
+                UndulaData td = UndulaDataStorage.get(target);
+                int tMax = UndulaConfig.getMaxStacks(d.shatterLevel(), d.penetrateLevel());
+                int cur = Math.min(td.stacks(), tMax);
+                boolean overflow = cur >= tMax;
+                int displayStacks = overflow ? cur : cur + 1;
+                float chainDmg = UndulaConfig.getUndulaDamage(displayStacks, d.shatterLevel(), d.penetrateLevel());
+
+                // chainDepth=0 允许亡语目标构建新的传染树
+                UndulaContext deathCtx = new UndulaContext(world, target, displayStacks,
+                    d.shatterLevel(), d.penetrateLevel(), null,
+                    0, critRate, chainDmg, overflow);
+
+                UndulaTrigger.execute(deathCtx);
+            }
         }
 
+        // 粒子与音效
         UndulaTrigger.sendParticleDirect(world, pos, radius, (byte) 0, -1);
         world.playSound(null, pos.getX(), pos.getY(), pos.getZ(),
             SoundEvents.ENTITY_PLAYER_SPLASH, SoundCategory.PLAYERS, 0.8f, 1.0f + actualStacks * 0.1f);
