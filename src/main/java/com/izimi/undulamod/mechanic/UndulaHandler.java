@@ -13,17 +13,11 @@ import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
-import net.minecraft.sound.SoundCategory;
-import net.minecraft.sound.SoundEvents;
-import net.minecraft.util.math.Box;
 import net.minecraft.util.math.Vec3d;
-
-import java.util.List;
 
 public class UndulaHandler {
 
     private static final Set<UUID> hitThisTick = new HashSet<>();
-    private static final Set<UUID> deathProcessed = new HashSet<>();
 
     public static void onJanusHit(PlayerEntity player, LivingEntity target,
                                     ItemStack stack, float critRate,
@@ -31,7 +25,6 @@ public class UndulaHandler {
         if (!target.isAlive()) return;
         if (world.random.nextFloat() >= critRate) return;
         if (hitThisTick.contains(target.getUuid())) return;
-
         hitThisTick.add(target.getUuid());
 
         UndulaData d = UndulaDataStorage.get(target);
@@ -41,80 +34,62 @@ public class UndulaHandler {
         int displayStacks = overflow ? raw : cur + 1;
         float dmg = UndulaConfig.getUndulaDamage(displayStacks, shatterLevel, penetrateLevel);
 
-        UndulaTrigger.execute(new UndulaContext(world, target, displayStacks,
-            shatterLevel, penetrateLevel, player.getUuid(), 0, critRate, dmg, overflow));
+        Vec3d pos = target.getPos().add(0, target.getHeight() * 0.5, 0);
+        UndulaContext ctx = new UndulaContext(world, pos, target.getUuid(),
+            displayStacks, shatterLevel, penetrateLevel, player.getUuid(),
+            0, critRate, dmg, overflow);
 
+        UndulaScheduler.scheduleImmediate(ctx);
         sendStack(target, world);
     }
 
     public static void onDeath(LivingEntity e, ServerWorld world) {
-        if (deathProcessed.contains(e.getUuid())) return;
-        deathProcessed.add(e.getUuid());
-
         UndulaData d = UndulaDataStorage.get(e);
-        boolean wasAffected = d.maxStacks() > 0;
+        if (d.maxStacks() <= 0) return;
 
-        if (!wasAffected) {
-            UndulaDataStorage.remove(e);
-            return;
-        }
-
-        int actualStacks = d.stacks() > 0 ? d.stacks() : 1;
-        int spreadStacks = Math.max(1, actualStacks / 2);
-
-        // 亡语AOE爆炸参数
-        float dmg = UndulaConfig.getUndulaDamage(actualStacks, d.shatterLevel(), d.penetrateLevel());
-        float radius = UndulaConfig.getUndulaRadius(actualStacks, d.shatterLevel());
-        Vec3d pos = e.getPos().add(0, e.getHeight() * 0.5, 0);
+        int stacks = d.stacks() > 0 ? d.stacks() : 1;
+        float dmg = UndulaConfig.getUndulaDamage(stacks, d.shatterLevel(), d.penetrateLevel());
         float critRate = d.critRate() > 0 ? d.critRate() : 0.10f;
+        int max = UndulaConfig.getMaxStacks(d.shatterLevel(), d.penetrateLevel());
+        Vec3d pos = e.getPos().add(0, e.getHeight() * 0.5, 0);
 
-        List<LivingEntity> targets = world.getEntitiesByClass(LivingEntity.class,
-            Box.from(pos).expand(radius),
-            target -> target.isAlive() && target != e && !(target instanceof PlayerEntity));
+        // 层数转移
+        UndulaTrigger.spreadStacks(world, e, Math.max(1, stacks / 2),
+            max, d.shatterLevel(), d.penetrateLevel());
 
-        for (LivingEntity target : targets) {
-            // 亡语直接伤害
-            target.damage(world.getDamageSources().magic(), dmg);
-
-            // 亡语暴击判定：对每个受伤目标，概率触发新连锁
-            if (world.random.nextFloat() < critRate) {
-                UndulaData td = UndulaDataStorage.get(target);
-                int tMax = UndulaConfig.getMaxStacks(d.shatterLevel(), d.penetrateLevel());
-                int cur = Math.min(td.stacks(), tMax);
-                boolean overflow = cur >= tMax;
-                int displayStacks = overflow ? cur : cur + 1;
-                float chainDmg = UndulaConfig.getUndulaDamage(displayStacks, d.shatterLevel(), d.penetrateLevel());
-
-                // chainDepth=0 允许亡语目标构建新的传染树
-                UndulaContext deathCtx = new UndulaContext(world, target, displayStacks,
-                    d.shatterLevel(), d.penetrateLevel(), null,
-                    0, critRate, chainDmg, overflow);
-
-                UndulaTrigger.execute(deathCtx);
-            }
+        // 拉拽
+        if (d.shatterLevel() > 0) {
+            UndulaScheduler.schedulePull(world, pos,
+                UndulaConfig.getUndulaRadius(stacks, d.shatterLevel()),
+                UndulaConfig.WHIRLPOOL_DURATION);
         }
 
-        // 粒子与音效
-        UndulaTrigger.sendParticleDirect(world, pos, radius, (byte) 0, -1);
-        world.playSound(null, pos.getX(), pos.getY(), pos.getZ(),
-            SoundEvents.ENTITY_PLAYER_SPLASH, SoundCategory.PLAYERS, 0.8f, 1.0f + actualStacks * 0.1f);
+        // 构造ctx，扔给调度器
+        UndulaContext ctx = new UndulaContext(world, pos, e.getUuid(),
+            stacks, d.shatterLevel(), d.penetrateLevel(), null,
+            0, critRate, dmg, false);
 
-        // 层数扩散
-        UndulaTrigger.spreadStacks(world, e, spreadStacks, d.maxStacks(),
-            d.shatterLevel(), d.penetrateLevel());
-
+        UndulaScheduler.scheduleImmediate(ctx);
         UndulaDataStorage.remove(e);
     }
 
     public static void tick(ServerWorld world) {
         hitThisTick.clear();
-        deathProcessed.clear();
         UndulaDataStorage.cleanup(world);
         UndulaScheduler.tick(world);
     }
 
     public static void sendStack(LivingEntity e, ServerWorld world) {
         int s = UndulaDataStorage.get(e).stacks();
+        for (ServerPlayerEntity p : world.getServer().getPlayerManager().getPlayerList())
+            if (p.squaredDistanceTo(e.getPos()) < UndulaConfig.PACKET_RANGE_SQ)
+                ServerPlayNetworking.send(p, new UndulaParticlePacket(s, (byte) 3, e.getId(), Vec3d.ZERO));
+    }
+
+    public static void sendStack(UUID uuid, ServerWorld world) {
+        int s = UndulaDataStorage.get(uuid).stacks();
+        LivingEntity e = (LivingEntity) world.getEntity(uuid);
+        if (e == null) return;
         for (ServerPlayerEntity p : world.getServer().getPlayerManager().getPlayerList())
             if (p.squaredDistanceTo(e.getPos()) < UndulaConfig.PACKET_RANGE_SQ)
                 ServerPlayNetworking.send(p, new UndulaParticlePacket(s, (byte) 3, e.getId(), Vec3d.ZERO));

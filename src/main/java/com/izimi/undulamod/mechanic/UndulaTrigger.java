@@ -19,13 +19,9 @@ import net.minecraft.util.math.Vec3d;
 
 public class UndulaTrigger {
 
-    private static final int MAX_CHAIN_DEPTH = 64;
+    private static final int MAX_CHAIN_DEPTH = 128;
 
-    public static void execute(UndulaContext ctx) {
-        UndulaScheduler.scheduleImmediate(ctx);
-    }
-
-    public static void buildChain(ServerWorld world, LivingEntity source,
+    public static void buildChain(ServerWorld world, Vec3d sourcePos,
                                 UndulaContext ctx, Map<UUID, Integer> blacklist,
                                 Map<Integer, List<UUID>> orderedBatch,
                                 int currentTag) {
@@ -33,11 +29,11 @@ public class UndulaTrigger {
 
         float radius = UndulaConfig.getUndulaRadius(ctx.stacks(), ctx.shatterLevel());
         List<LivingEntity> targets = world.getEntitiesByClass(LivingEntity.class,
-            Box.from(source.getPos()).expand(radius),
+            Box.from(sourcePos).expand(radius),
             e -> e.isAlive() && !(e instanceof PlayerEntity)
                 && !blacklist.containsKey(e.getUuid()));
 
-        targets.sort(Comparator.comparingDouble(e -> e.squaredDistanceTo(source.getPos())));
+        targets.sort(Comparator.comparingDouble(e -> e.squaredDistanceTo(sourcePos)));
 
         int nextTag = currentTag + 1;
         List<LivingEntity> successList = new ArrayList<>();
@@ -50,7 +46,7 @@ public class UndulaTrigger {
         }
 
         for (int i = successList.size() - 1; i >= 0; i--) {
-            buildChain(world, successList.get(i), ctx, blacklist, orderedBatch, nextTag);
+            buildChain(world, successList.get(i).getPos(), ctx, blacklist, orderedBatch, nextTag);
         }
     }
 
@@ -67,7 +63,7 @@ public class UndulaTrigger {
     }
 
     public static void spreadStacks(ServerWorld world, LivingEntity source, int remaining,
-                                    int maxLimit, int sourceShatter, int sourcePenetrate) {
+                                     int maxLimit, int sourceShatter, int sourcePenetrate) {
         if (remaining < 1) return;
 
         Vec3d pos = source.getPos();

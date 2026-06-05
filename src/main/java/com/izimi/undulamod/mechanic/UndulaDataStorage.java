@@ -11,18 +11,30 @@ public class UndulaDataStorage {
 
     private static final Map<UUID, UndulaData> dataMap = new ConcurrentHashMap<>();
     private static long lastCleanupTick = 0;
-    private static final int CLEANUP_INTERVAL = 100; // 每5秒清理一次
+    private static final int CLEANUP_INTERVAL = 100;
+
+    public static UndulaData get(UUID uuid) {
+        return dataMap.getOrDefault(uuid, UndulaData.empty());
+    }
 
     public static UndulaData get(LivingEntity entity) {
-        return dataMap.getOrDefault(entity.getUuid(), UndulaData.empty());
+        return get(entity.getUuid());
+    }
+
+    public static void set(UUID uuid, UndulaData data) {
+        dataMap.put(uuid, data);
     }
 
     public static void set(LivingEntity entity, UndulaData data) {
-        dataMap.put(entity.getUuid(), data);
+        set(entity.getUuid(), data);
+    }
+
+    public static void remove(UUID uuid) {
+        dataMap.remove(uuid);
     }
 
     public static void remove(LivingEntity entity) {
-        dataMap.remove(entity.getUuid());
+        remove(entity.getUuid());
     }
 
     public static void cleanup(ServerWorld world) {
@@ -30,13 +42,9 @@ public class UndulaDataStorage {
         if (currentTick - lastCleanupTick < CLEANUP_INTERVAL) return;
         lastCleanupTick = currentTick;
 
-        dataMap.entrySet().removeIf(entry -> {
-            LivingEntity entity = (LivingEntity) world.getEntity(entry.getKey());
+        dataMap.keySet().removeIf(uuid -> {
+            LivingEntity entity = (LivingEntity) world.getEntity(uuid);
             return entity == null || !entity.isAlive();
         });
-    }
-
-    public static int size() {
-        return dataMap.size();
     }
 }
